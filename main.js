@@ -136,103 +136,67 @@ function registerEvents() {
         return store.get('groups', []);
     });
 
-	// 修改 main.js 中的 openBrowser 函数
-	const puppeteer = require('puppeteer');
+    ipcMain.handle('open-browser', async (event, account) => {
+        const { platform, id } = account;
+        const windowKey = `${platform}_${id}`;
 
-	ipcMain.handle('open-browser', async (event, account) => {
-		const { platform, id, username, password } = account;
-		const windowKey = `${platform}_${id}`;
+        // 关闭其他账号窗口（只保留一个）
+        for (const key in openBrowsers) {
+            if (openBrowsers[key]) {
+                openBrowsers[key].close();
+            }
+        }
 
-		// 关闭其他账号窗口（只保留一个）
-		for (const key in openBrowsers) {
-			if (openBrowsers[key]) {
-				openBrowsers[key].close();
-			}
-		}
+        const partitionName = `persist:${windowKey}`;
+        const browserWindow = new BrowserWindow({
+            width: 1000,
+            height: 800,
+            webPreferences: {
+                preload: path.join(__dirname, 'preload.js'),
+                nodeIntegration: false,
+                contextIsolation: true,
+                partition: partitionName
+            },
+            // 添加自定义图标
+            icon: path.join(__dirname, 'img/icon.ico') 
+        });
 
-		const partitionName = `persist:${windowKey}`;
-		const browserWindow = new BrowserWindow({
-			width: 1000,
-			height: 800,
-			webPreferences: {
-				preload: path.join(__dirname, 'preload.js'),
-				nodeIntegration: false,
-				contextIsolation: true,
-				partition: partitionName
-			},
-			// 添加自定义图标
-			icon: path.join(__dirname, 'img/icon.ico') 
-		});
+        openBrowsers[windowKey] = browserWindow;
 
-		openBrowsers[windowKey] = browserWindow;
+        browserWindow.on('closed', () => {
+            delete openBrowsers[windowKey];
+        });
 
-		browserWindow.on('closed', () => {
-			delete openBrowsers[windowKey];
-		});
+        let url = 'https://www.example.com';
+        if (platform === 'wechat') url = 'https://mp.weixin.qq.com';
+        else if (platform === 'baidu') url = 'https://baijiahao.baidu.com';
+        else if (platform === 'toutiao') url = 'https://mp.toutiao.com';
 
-		let url = 'https://www.example.com';
-		if (platform === 'wechat') url = 'https://mp.weixin.qq.com';
-		else if (platform === 'baidu') url = 'https://baijiahao.baidu.com';
-		else if (platform === 'toutiao') url = 'https://mp.toutiao.com';
+        browserWindow.loadURL(url).catch((error) => {
+            console.error('Error loading URL:', error);
+        });
 
-		browserWindow.loadURL(url).catch((error) => {
-			console.error('Error loading URL:', error);
-		});
+        browserWindow.webContents.on('did-finish-load', async () => {
+            const currentURL = browserWindow.webContents.getURL();
+            let status = 'unknown';
 
-		browserWindow.webContents.on('did-finish-load', async () => {
-			const browser = await puppeteer.launch({ headless: false });
-			const page = await browser.newPage();
-			await page.goto(url);
+            // 自动判断登录状态
+            if (platform === 'wechat') {
+                status = currentURL.includes('home') ? 'logged-in' : 'not-logged-in';
+            } else if (platform === 'baidu') {
+                status = currentURL.includes('dashboard') ? 'logged-in' : 'not-logged-in';
+            } else if (platform === 'toutiao') {
+                status = currentURL.includes('profile') ? 'logged-in' : 'not-logged-in';
+            }
 
-			try {
-				if (platform === 'wechat') {
-					// 微信公众号登录输入框和按钮的选择器，需要根据实际情况调整
-					await page.waitForSelector('#account');
-					await page.type('#account', username);
-					await page.waitForSelector('#pwd');
-					await page.type('#pwd', password);
-					await page.click('#loginBt');
-				} else if (platform === 'baidu') {
-					// 百家号登录输入框和按钮的选择器，需要根据实际情况调整
-					await page.waitForSelector('#account');
-					await page.type('#account', username);
-					await page.waitForSelector('#password');
-					await page.type('#password', password);
-					await page.click('#login-button');
-				} else if (platform === 'toutiao') {
-					// 今日头条登录输入框和按钮的选择器，需要根据实际情况调整
-					await page.waitForSelector('#username');
-					await page.type('#username', username);
-					await page.waitForSelector('#password');
-					await page.type('#password', password);
-					await page.click('#login-btn');
-				}
-			} catch (error) {
-				console.error('Error during login:', error);
-			}
-
-			const currentURL = browserWindow.webContents.getURL();
-			let status = 'unknown';
-
-			// 自动判断登录状态
-			if (platform === 'wechat') {
-				status = currentURL.includes('home') ? 'logged-in' : 'not-logged-in';
-			} else if (platform === 'baidu') {
-				status = currentURL.includes('dashboard') ? 'logged-in' : 'not-logged-in';
-			} else if (platform === 'toutiao') {
-				status = currentURL.includes('profile') ? 'logged-in' : 'not-logged-in';
-			}
-
-			// 发送登录状态给主窗口
-			mainWindow?.webContents.send('login-status', {
-				platform,
-				accountId: id,
-				status
-			});
-
-			await browser.close();
-		});
-	});
+            // 发送登录状态给主窗口
+            mainWindow?.webContents.send('login-status', {
+                platform,
+                accountId: id,
+                status
+            });
+        });
+    });
 }
 
 app.whenReady().then(() => {

@@ -267,7 +267,78 @@
             margin: 15% auto;
             padding: 20px;
             border: 1px solid #888;
-            width: 80%;
+            width: 300px;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            text-align: right;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #f44336;
+            color: white;
+        }
+
+        /* 通知组件样式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            color: white;
+            border-radius: 4px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            height: 20px;
+            line-height: 20px;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -467,16 +538,17 @@
                 window.electronAPI.onAccountsUpdated(loadAccounts);
 
                 // 监听登录状态更新
-                window.electronAPI.onLoginStatus((event, { platform, accountId, status }) => {
-                    const accountElement = document.querySelector(`[data-account-id="${platform}_${accountId}"]`);
-                    if (accountElement) {
-                        const statusBadge = accountElement.querySelector('.status-badge');
-                        if (statusBadge) {
-                            statusBadge.textContent = status === 'logged-in' ? '已登录' : '未登录';
-                            statusBadge.className = `status-badge ${status === 'logged-in' ? 'status-logged-in' : 'status-logged-out'}`;
-                        }
-                    }
-                });
+				window.electronAPI.onLoginStatus((event, { platform, accountId, status }) => {
+					const accountElement = document.querySelector(`[data-account-id="${platform}_${accountId}"]`);
+					if (accountElement) {
+						const statusBadge = accountElement.querySelector('.status-badge');
+						if (statusBadge) {
+							statusBadge.textContent = status === 'logged-in' ? '已登录' : '未登录';
+							statusBadge.className = `status-badge ${status === 'logged-in' ? 'status-logged-in' : 'status-logged-out'}`;
+						}
+					}
+				});
+
             } catch (error) {
                 console.error('Initialization error:', error);
                 showErrorMessage('初始化应用失败: ' + error.message);
@@ -636,14 +708,24 @@
         }
 
         // 打开浏览器
-        async function openBrowser(account) {
-            try {
-                await window.electronAPI.openBrowser(account);
-            } catch (error) {
-                console.error('Error opening browser:', error);
-                showNotification('打开浏览器失败: ' + error.message, 'error');
-            }
+    async function openBrowser(account) {
+        try {
+            // 过滤 account 对象，只保留必要的属性
+            const filteredAccount = {
+                id: account.id,
+                platform: account.platform,
+                username: account.username,
+                password: account.password,
+                description: account.description,
+                group: account.group
+            };
+
+            await window.electronAPI.openBrowser(filteredAccount);
+        } catch (error) {
+            console.error('Error opening browser:', error);
+            showNotification('打开浏览器失败: ' + error.message, 'error');
         }
+    }
 
         // 打开添加账号对话框
         function openAddAccountDialog() {
