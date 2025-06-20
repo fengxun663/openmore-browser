@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>多自媒体账号管理工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* 顶部导航栏样式 */
+        .top-nav {
+            background-color: #333;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .top-nav h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .menu ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        .menu ul li {
+            margin-right: 20px;
+        }
+
+        .menu ul li a {
+            color: white;
+            text-decoration: none;
+        }
+
+        /* 主内容区域样式 */
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+
+        /* 侧边栏账号列表样式 */
+        .sidebar {
+            width: 300px;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .add-group-btn {
+            background-color: #2196F3;
+        }
+
+        .add-account-btn {
+            background-color: #4CAF50;
+        }
+
+        .accounts-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .accounts-list li {
+            padding: 10px;
+            border: 1px solid #eee;
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accounts-list li:hover {
+            background-color: #f5f5f5;
+        }
+
+        .delete-btn {
+            color: #f44336;
+            cursor: pointer;
+        }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+            color: white;
+        }
+
+        .status-logged-in {
+            background-color: #4CAF50;
+        }
+
+        .status-logged-out {
+            background-color: #f44336;
+        }
+
+        .accordion-group {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .group-title {
+            padding: 12px 15px;
+            background-color: #f5f5f5;
+            cursor: pointer;
+            position: relative;
+            font-weight: bold;
+            user-select: none; /* 防止文字被选中 */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 使用伪元素创建三角形图标 */
+        .group-title::before {
+            content: "";
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #333;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            margin-right: 10px;
+            transition: transform 0.3s ease; /* 添加旋转动画 */
+        }
+
+        /* 展开状态下的三角形样式 */
+        .group-title.active::before {
+            transform: rotate(90deg);
+        }
+
+        /* 文件夹图标样式 */
+        .folder-icon {
+            margin-right: 10px;
+            color: #5a7ea0;
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+
+        .group-title.active .folder-icon {
+            color: #3a6ea5;
+        }
+
+        .group-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease; /* 添加展开/折叠动画 */
+            padding: 0 15px;
+            background-color: #fff;
+        }
+
+        .group-content ul {
+            padding: 10px 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .group-content li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .group-content li:last-child {
+            border-bottom: none;
+        }
+
+        .group-title:hover {
+            background-color: #f5f5f5;
+        }
+
+        .delete-group-btn {
+            color: #f44336;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            margin-left: auto;
+        }
+
+        .group-title:hover .delete-group-btn {
+            display: inline;
+        }
+
+        /* 右侧显示区域样式 */
+        .right-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .welcome-message {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .announcement {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .announcement h3 {
+            margin-top: 0;
+        }
+
+        .ad-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 300px;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            text-align: right;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #f44336;
+            color: white;
+        }
+
+        /* 通知组件样式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            color: white;
+            border-radius: 4px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            height: 20px;
+            line-height: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="top-nav">
+        <h1>多自媒体账号管理工具</h1>
+        <div class="menu">
+            <ul>
+                <li><a href="#">主页</a></li>
+                <li><a href="#">帮助</a></li>
+                <li><a href="#">关于</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-container">
+        <!-- 侧边栏账号列表 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+
+                <button class="btn add-group-btn" onclick="openAddGroupDialog()"><i class="fas fa-plus"></i>添加分组</button>
+                <button class="btn add-account-btn" onclick="openAddAccountDialog()"><i class="fas fa-user-plus"></i>添加账号</button>
+            </div>
+            <h3>账号列表</h3>
+            <ul id="accounts-list" class="accounts-list"></ul>
+        </div>
+
+        <!-- 右侧显示区域 -->
+        <div class="right-content">
+            <div class="welcome-message">欢迎使用多自媒体账号管理工具！</div>
+            <div class="description">
+                这是一款强大的多自媒体账号管理工具，帮助您轻松管理多个自媒体平台的账号。您可以方便地添加、删除账号，查看账号登录状态，并快速打开账号对应的网页。
+            </div>
+            <div class="announcement">
+                <h3>公告</h3>
+                <p>近期我们将对部分功能进行优化，可能会有短暂的服务中断，请您提前做好准备。如有任何问题，请随时联系我们。</p>
+            </div>
+            <img class="ad-image" src="https://via.placeholder.com/800x300" alt="广告图片">
+        </div>
+    </div>
+
+    <!-- 添加账号模态框 -->
+    <div id="add-account-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddAccountDialog()">&times;</span>
+            <h3>添加账号</h3>
+            <form id="add-account-form">
+                <div class="form-group">
+                    <label for="platform">平台</label>
+                    <select id="platform" required>
+                        <option value="wechat">微信公众号</option>
+                        <option value="百">百家号</option>
+                        <option value="toutiao">今日头条</option>
+                        <option value="weibo">微博</option>
+                        <option value="douyin">抖音</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">描述</label>
+                    <input type="text" id="description">
+                </div>
+                <div class="form-group">
+                    <label for="group">分组</label>
+                    <select id="account-group" required>
+                        <option value="">请选择分组</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddAccountDialog()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加分组模态框 -->
+    <div id="add-group-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddGroupDialog()">&times;</span>
+            <h3>添加分组</h3>
+            <form id="add-group-form">
+                <div class="form-group">
+                    <label for="group-name">分组名称</label>
+                    <input type="text" id="group-name" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddGroupDialog()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="notification"></div>
+    <div id="error-message" class="error-message" style="display: none;"></div>
+
+    <script>
+        // 获取 DOM 元素
+        const accountsList = document.getElementById('accounts-list');
+        const addAccountModal = document.getElementById('add-account-modal');
+        const addAccountForm = document.getElementById('add-account-form');
+        const addGroupModal = document.getElementById('add-group-modal');
+        const addGroupForm = document.getElementById('add-group-form');
+        const accountGroupSelect = document.getElementById('account-group');
+        const notification = document.getElementById('notification');
+        const errorMessage = document.getElementById('error-message');
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 检查 electronAPI 是否可用
+                if (!window.electronAPI) {
+                    console.error('electronAPI is undefined');
+                    showErrorMessage('electronAPI 未定义，请检查 preload.js 配置');
+                    return;
+                }
+
+                // 加载账号列表和分组
+                await loadGroups();
+                loadAccounts();
+
+                // 监听添加账号表单提交
+                addAccountForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    // 获取表单数据
+                    const platform = document.getElementById('platform').value;
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    const description = document.getElementById('description').value;
+                    const group = document.getElementById('account-group').value;
+
+                    // 验证分组是否选择
+                    if (!group) {
+                        showNotification('请选择账号所属分组', 'error');
+                        return;
+                    }
+
+                    // 创建账号对象
+                    const account = {
+                        id: Date.now().toString(),
+                        platform,
+                        username,
+                        password,
+                        description,
+                        group,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    try {
+                        console.log('Saving account:', account);
+                        await window.electronAPI.saveAccount(account);
+                        showNotification('账号保存成功');
+                        closeAddAccountDialog();
+                        addAccountForm.reset();
+                    } catch (error) {
+                        console.error('Error saving account:', error);
+                        showNotification('保存账号失败: ' + error.message, 'error');
+                    }
+                });
+
+                // 监听添加分组表单提交
+                addGroupForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    // 获取表单数据
+                    const groupName = document.getElementById('group-name').value;
+
+                    try {
+                        console.log('Creating group:', groupName);
+                        await window.electronAPI.createGroup(groupName);
+                        showNotification('分组创建成功');
+                        closeAddGroupDialog();
+                        addGroupForm.reset();
+                        await loadGroups();
+                        loadAccounts();
+                    } catch (error) {
+                        console.error('Error creating group:', error);
+                        showNotification('创建分组失败: ' + error.message, 'error');
+                    }
+                });
+
+                // 监听账号更新事件
+                window.electronAPI.onAccountsUpdated(loadAccounts);
+
+                // 监听登录状态更新
+                window.electronAPI.onLoginStatus((event, { platform, accountId, status }) => {
+                    const accountElement = document.querySelector(`[data-account-id="${platform}_${accountId}"]`);
+                    if (accountElement) {
+                        const statusBadge = accountElement.querySelector('.status-badge');
+                        if (statusBadge) {
+                            statusBadge.textContent = status === 'logged-in' ? '已登录' : '未登录';
+                            statusBadge.className = `status-badge ${status === 'logged-in' ? 'status-logged-in' : 'status-logged-out'}`;
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showErrorMessage('初始化应用失败: ' + error.message);
+            }
+        });
+
+        // 加载分组
+        async function loadGroups() {
+            try {
+                const groups = await window.electronAPI.getGroups();
+
+                // 清空分组选择
+                accountGroupSelect.innerHTML = '<option value="">请选择分组</option>';
+
+                // 添加默认分组（平台）
+                const defaultGroups = ['微信公众号', '百家号', '今日头条', '微博', '抖音'];
+                defaultGroups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group;
+                    option.textContent = group;
+                    accountGroupSelect.appendChild(option);
+                });
+
+                // 添加用户自定义分组
+                if (groups && groups.length > 0) {
+                    groups.forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group;
+                        option.textContent = group;
+                        accountGroupSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                showNotification('加载分组失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载账号列表
+        async function loadAccounts() {
+            try {
+                const accounts = await window.electronAPI.getAccounts();
+
+                accountsList.innerHTML = '';
+
+                // 检查是否有账号
+                if (!accounts || Object.keys(accounts).length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = '暂无账号，请添加';
+                    li.style.color = '#888';
+                    accountsList.appendChild(li);
+                    return;
+                }
+
+                // 按分组存储账号
+                const groupedAccounts = {};
+                for (const platform in accounts) {
+                    const platformAccounts = accounts[platform];
+                    for (const accountId in platformAccounts) {
+                        const account = platformAccounts[accountId];
+                        const group = account.group || platform; // 如果没有分组信息，使用平台作为分组
+                        if (!groupedAccounts[group]) {
+                            groupedAccounts[group] = [];
+                        }
+                        groupedAccounts[group].push(account);
+                    }
+                }
+
+                // 按分组显示账号
+                for (const group in groupedAccounts) {
+                    const accordionGroup = document.createElement('div');
+                    accordionGroup.className = 'accordion-group';
+
+                    const groupTitle = document.createElement('div');
+                    groupTitle.className = 'group-title';
+                    groupTitle.innerHTML = `
+                        <i class="folder-icon fas fa-folder"></i>
+                        <span class="title-text">${group}</span>
+                        <span class="delete-group-btn" onclick="deleteGroup('${group}')">删除分组</span>
+                    `;
+                    groupTitle.onclick = () => toggleGroup(groupTitle);
+                    accordionGroup.appendChild(groupTitle);
+
+                    const groupContent = document.createElement('div');
+                    groupContent.className = 'group-content';
+
+                    const groupList = document.createElement('ul');
+                    const groupAccounts = groupedAccounts[group];
+                    for (const account of groupAccounts) {
+                        const li = document.createElement('li');
+                        li.dataset.accountId = `${account.platform}_${account.id}`;
+
+                        // 显示描述或账号名称
+                        const displayText = account.description || account.username;
+
+                        // 创建登录状态徽章
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = 'status-badge status-logged-out';
+                        statusBadge.textContent = '未登录';
+
+                        // 设置账号项内容
+						<!-- 修改 index.html 中显示账号列表部分 -->
+						li.innerHTML = `
+						  <div>
+							<span>${displayText}</span>
+							${statusBadge}
+						  </div>
+						  <div>
+							<span class="delete-btn" onclick="deleteAccount(event, '${account.platform}', '${account.id}')">×</span>
+						  </div>
+						`;
+
+                        // 添加点击事件
+                        li.onclick = () => openBrowser(account);
+
+                        groupList.appendChild(li);
+                    }
+                    groupContent.appendChild(groupList);
+                    accordionGroup.appendChild(groupContent);
+
+                    accountsList.appendChild(accordionGroup);
+                }
+
+                // 默认展开第一个分组
+                const firstTitle = document.querySelector('.group-title');
+                if (firstTitle) {
+                    firstTitle.classList.add('active');
+                    firstTitle.nextElementSibling.style.maxHeight = firstTitle.nextElementSibling.scrollHeight + 'px';
+                }
+            } catch (error) {
+                console.error('Error loading accounts:', error);
+                showNotification('加载账号列表失败: ' + error.message, 'error');
+            }
+        }
+
+        // 切换分组展开/折叠
+        function toggleGroup(title) {
+            // 切换当前分组的active类
+            title.classList.toggle('active');
+
+            // 获取关联的内容区域
+            const content = title.nextElementSibling;
+
+            // 切换内容区域的显示/隐藏
+            if (title.classList.contains('active')) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            } else {
+                content.style.maxHeight = '0';
+            }
+
+            // 关闭其他打开的分组
+            document.querySelectorAll('.group-title').forEach(otherTitle => {
+                if (otherTitle !== title && otherTitle.classList.contains('active')) {
+                    otherTitle.classList.remove('active');
+                    otherTitle.nextElementSibling.style.maxHeight = '0';
+                }
+            });
+        }
+
+        // 打开浏览器
+        async function openBrowser(account) {
+            try {
+                await window.electronAPI.openBrowser(account);
+            } catch (error) {
+                console.error('Error opening browser:', error);
+                showNotification('打开浏览器失败: ' + error.message, 'error');
+            }
+        }
+
+        // 打开添加账号对话框
+        function openAddAccountDialog() {
+            addAccountModal.style.display = 'block';
+        }
+
+        // 关闭添加账号对话框
+        function closeAddAccountDialog() {
+            addAccountModal.style.display = 'none';
+        }
+
+        // 打开添加分组对话框
+        function openAddGroupDialog() {
+            addGroupModal.style.display = 'block';
+        }
+
+        // 关闭添加分组对话框
+        function closeAddGroupDialog() {
+            addGroupModal.style.display = 'none';
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            setTimeout(() => {
+                notification.textContent = '';
+                notification.className = 'notification';
+            }, 3000);
+        }
+
+        // 显示错误消息
+        function showErrorMessage(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // 删除账号
+		// 修改 index.html 中的 deleteAccount 函数
+		async function deleteAccount(event, platform, accountId) {
+			event.stopPropagation(); // 阻止事件冒泡
+			try {
+				await window.electronAPI.deleteAccount({ platform, accountId });
+				showNotification('账号删除成功');
+				loadAccounts();
+			} catch (error) {
+				console.error('Error deleting account:', error);
+				showNotification('删除账号失败: ' + error.message, 'error');
+			}
+		}
+
+        // 删除分组
+        async function deleteGroup(groupName) {
+            try {
+                await window.electronAPI.deleteGroup(groupName);
+                showNotification('分组删除成功');
+                loadAccounts();
+            } catch (error) {
+                console.error('Error deleting group:', error);
+                showNotification('删除分组失败: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>
